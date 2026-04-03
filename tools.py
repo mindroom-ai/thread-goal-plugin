@@ -6,9 +6,8 @@ from __future__ import annotations
 import json
 import sys
 from datetime import UTC, datetime
-from importlib import import_module, util
+from importlib import util as importlib_util
 from pathlib import Path
-from types import ModuleType
 
 from agno.tools import Toolkit
 
@@ -26,33 +25,17 @@ from mindroom.tool_system.runtime_context import (
 )
 
 _PLUGIN_ROOT = Path(__file__).resolve().parent
-_PACKAGE_NAME = f"{__name__}_modules"
+_STATE_MOD = "_thread_goal_state"
+if _STATE_MOD in sys.modules:
+    state = sys.modules[_STATE_MOD]
+else:
+    _state_spec = importlib_util.spec_from_file_location(_STATE_MOD, _PLUGIN_ROOT / "state.py")
+    assert _state_spec is not None and _state_spec.loader is not None  # noqa: S101
+    state = importlib_util.module_from_spec(_state_spec)
+    sys.modules[_STATE_MOD] = state
+    _state_spec.loader.exec_module(state)
 
-
-def _ensure_package() -> None:
-    """Register a synthetic package so sibling modules can be imported safely."""
-    if _PACKAGE_NAME in sys.modules:
-        return
-
-    package_spec = util.spec_from_loader(_PACKAGE_NAME, loader=None, is_package=True)
-    package_module = ModuleType(_PACKAGE_NAME)
-    package_module.__file__ = str(_PLUGIN_ROOT / "__init__.py")
-    package_module.__package__ = _PACKAGE_NAME
-    package_module.__path__ = [str(_PLUGIN_ROOT)]
-    if package_spec is not None:
-        package_spec.submodule_search_locations = [str(_PLUGIN_ROOT)]
-        package_module.__spec__ = package_spec
-    sys.modules[_PACKAGE_NAME] = package_module
-
-
-def _load_module(name: str) -> ModuleType:
-    return import_module(f"{_PACKAGE_NAME}.{name}")
-
-
-_ensure_package()
-
-state = _load_module("state")
-MAX_GOAL_CHARS = state.MAX_GOAL_CHARS
+MAX_GOAL_CHARS: int = state.MAX_GOAL_CHARS
 ThreadGoalRecord = state.ThreadGoalRecord
 clear_thread_goal_state = state.clear_thread_goal
 has_thread_goal_content = state.has_thread_goal_content
