@@ -9,6 +9,11 @@ from pathlib import Path
 
 from mindroom.hooks import EnrichmentItem, MessageEnrichContext, hook
 
+# MindRoom loads plugin files (hooks.py, tools.py) by absolute path using
+# importlib.util.spec_from_file_location, so they aren't part of a real Python
+# package. Normal relative imports like ``from . import state`` don't work.
+# We load the sibling ``state.py`` the same way and cache it in sys.modules
+# so both hooks.py and tools.py share one instance.
 _PLUGIN_ROOT = Path(__file__).resolve().parent
 _STATE_MOD = "_thread_goal_state"
 if _STATE_MOD in sys.modules:
