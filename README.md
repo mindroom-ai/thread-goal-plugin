@@ -4,11 +4,11 @@ A MindRoom plugin for persistent thread goals that survive compaction.
 
 ## Problem
 
-When MindRoom compacts a long conversation, injected context and earlier instructions get summarized away. Agents lose track of what the thread is actually trying to achieve.
+When AI models compact long conversations, earlier instructions and injected context may get summarized away. Agents lose track of what the thread is actually trying to achieve.
 
 ## Solution
 
-A short goal string (≤160 chars) stored as a Matrix state event (`com.mindroom.thread.goal`) and re-injected into every prompt via the `message:enrich` hook. Because it's read fresh from Matrix state each turn — not baked into conversation history — it survives compaction automatically.
+A short goal string (≤160 chars) stored as a Matrix state event (`com.mindroom.thread.goal`) and re-injected into every prompt via the `message:enrich` hook. Because it's read fresh from Matrix state each turn — not baked into conversation history — it's immune to compaction.
 
 ## Features
 
