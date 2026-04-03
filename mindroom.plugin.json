@@ -1,0 +1,5 @@
+{
+  "name": "thread-goal",
+  "hooks_module": "hooks.py",
+  "tools_module": "tools.py"
+}
