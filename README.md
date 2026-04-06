@@ -1,6 +1,12 @@
 # Thread Goal
 
-Persistent thread goals for MindRoom agents that survive context compaction.
+[![License](https://img.shields.io/github/license/mindroom-ai/thread-goal-plugin)](https://github.com/mindroom-ai/thread-goal-plugin/blob/main/LICENSE)
+[![Docs](https://img.shields.io/badge/docs-plugins-blue)](https://docs.mindroom.chat/plugins/)
+[![Hooks](https://img.shields.io/badge/docs-hooks-blue)](https://docs.mindroom.chat/hooks/)
+
+<img src="https://raw.githubusercontent.com/mindroom-ai/mindroom/main/frontend/public/logo.png" alt="MindRoom Logo" align="right" width="120" />
+
+Persistent thread goals for [MindRoom](https://github.com/mindroom-ai/mindroom) agents that survive context compaction.
 
 When agents work on long tasks, conversation history gets compacted to save tokens. Important context can be lost. Thread Goal stores a short goal string (≤160 chars) as a Matrix state event and re-injects it into every prompt, so the agent always knows *what* it's working toward — no matter how many turns have passed.
 
