@@ -1,69 +1,46 @@
-# thread-goal-plugin
+# Thread Goal
 
-A MindRoom plugin for persistent thread goals that survive compaction.
+MindRoom plugin that gives each conversation thread a persistent goal that survives context compaction.
 
-## Problem
+When agents work on long tasks, conversation history gets compacted to save tokens. Important context can be lost. Thread Goal stores a short goal string (≤160 chars) as a Matrix state event and re-injects it into every prompt, so the agent always knows *what* it's working toward — no matter how many turns have passed.
 
-When AI models compact long conversations, earlier instructions and injected context may get summarized away. Agents lose track of what the thread is actually trying to achieve.
+## How it works
 
-## Solution
+1. Agent (or user) sets a goal via the `set_thread_goal` tool
+2. Goal is stored as a Matrix room state event (`com.mindroom.thread.goal`)
+3. Every turn, the `message:enrich` hook reads the goal from Matrix state and injects it into the prompt
+4. Goal persists indefinitely — immune to compaction, restarts, and context window limits
 
-A short goal string (≤160 chars) stored as a Matrix state event (`com.mindroom.thread.goal`) and re-injected into every prompt via the `message:enrich` hook. Because it's read fresh from Matrix state each turn — not baked into conversation history — it's immune to compaction.
+## Agent tools
 
-## Features
-
-- **Persistent goals** — stored as Matrix room state, thread-scoped
-- **Compaction-proof** — enrichment re-injected fresh each turn, never summarized away
-- **Lightweight** — ~44-70 tokens per turn overhead
-- **3 tools** — `set_thread_goal`, `get_thread_goal`, `clear_thread_goal`
-- **`message:enrich` hook** — priority 40 (before workloop at 50), `cache_policy="stable"`
-- **Thread-scoped only** — refuses to operate at room level
-- **Last-writer-wins** — simple semantics, tombstone `{}` on clear
-
-## Complements Workloop
-
-| Plugin | Purpose |
-|--------|---------|
-| **thread-goal** | *What* we're achieving (the destination) |
-| **workloop** | *How* to get there (the steps) |
-
-## Installation
-
-1. Copy this directory to `~/.mindroom/plugins/thread-goal/`
-2. Add to `config.yaml`:
-
-```yaml
-plugins:
-  - path: plugins/thread-goal
-```
-
-3. Add `thread_goal` to your agent's tools list:
-
-```yaml
-agents:
-  your_agent:
-    tools: [thread_goal]
-```
-
-## Files
-
-| File | Purpose |
+| Tool | Purpose |
 |------|---------|
-| `mindroom.plugin.json` | Plugin manifest |
-| `state.py` | `ThreadGoalRecord` dataclass, parse/serialize helpers, `MAX_GOAL_CHARS=160` |
-| `tools.py` | `set_thread_goal`, `get_thread_goal`, `clear_thread_goal` tool factory |
-| `hooks.py` | `message:enrich` hook — injects goal into every prompt |
-| `tests/` | 13 tests covering state, tools, hooks, and edge cases |
+| `set_thread_goal(goal)` | Set or update the thread's goal (≤160 chars) |
+| `get_thread_goal()` | Read the current goal |
+| `clear_thread_goal()` | Remove the goal |
 
-## State Event
+All tools are thread-scoped only — they refuse to operate at room level.
 
-```
-Type: com.mindroom.thread.goal
-State key: <thread_event_id>
-Content: {"goal": "...", "set_by": "@user:server", "set_at": "2026-04-03T..."}
-Tombstone (cleared): {}
-```
+## Design
 
-## License
+- **Storage:** Matrix state event (type `com.mindroom.thread.goal`, state key = thread event ID)
+- **Injection:** `message:enrich` hook at priority 40 (before workloop at 50)
+- **Overhead:** ~44–70 tokens per turn
+- **Conflict resolution:** Last writer wins
+- **Clearing:** Writes a tombstone (`{}`) to the state event
 
-MIT — see [LICENSE](LICENSE).
+## Complements workloop
+
+**thread-goal** = *what* the agent is trying to achieve (the destination)
+**workloop** = *how* it gets there (the steps)
+
+## Setup
+
+1. Copy to `~/.mindroom-chat/plugins/thread-goal`
+2. Add to `config.yaml`:
+   ```yaml
+   plugins:
+     - path: plugins/thread-goal
+   ```
+3. Add `thread_goal` to agent's tools list
+4. Restart MindRoom
