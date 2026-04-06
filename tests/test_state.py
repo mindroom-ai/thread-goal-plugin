@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-import importlib.util
+from importlib import util
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -13,15 +13,18 @@ import pytest
 if TYPE_CHECKING:
     from types import ModuleType
 
+PACKAGE_NAME = f"mindroom_plugin_{Path(__file__).resolve().parents[1].name.replace('-', '_')}"
+
 
 def _load_state_module() -> ModuleType:
-    """Load the plugin state module directly from disk."""
+    """Load the plugin state module under its synthetic package name."""
     state_path = Path(__file__).resolve().parents[1] / "state.py"
-    module_name = "thread_goal_state_test"
-    spec = importlib.util.spec_from_file_location(module_name, state_path)
+    module_name = f"{PACKAGE_NAME}.state"
+    sys.modules.pop(module_name, None)
+    spec = util.spec_from_file_location(module_name, state_path)
     assert spec is not None
     assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
+    module = util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module

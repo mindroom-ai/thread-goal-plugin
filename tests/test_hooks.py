@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-import importlib.util
+from importlib import util
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -17,15 +17,18 @@ from mindroom.hooks.decorators import get_hook_metadata
 if TYPE_CHECKING:
     from types import ModuleType
 
+PACKAGE_NAME = f"mindroom_plugin_{Path(__file__).resolve().parents[1].name.replace('-', '_')}"
+
 
 def _load_hooks_module() -> ModuleType:
-    """Load the plugin hooks module directly from disk."""
+    """Load the plugin hooks module under its synthetic package name."""
     hooks_path = Path(__file__).resolve().parents[1] / "hooks.py"
-    module_name = "thread_goal_hooks_test"
-    spec = importlib.util.spec_from_file_location(module_name, hooks_path)
+    module_name = f"{PACKAGE_NAME}.hooks"
+    sys.modules.pop(module_name, None)
+    spec = util.spec_from_file_location(module_name, hooks_path)
     assert spec is not None
     assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
+    module = util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module

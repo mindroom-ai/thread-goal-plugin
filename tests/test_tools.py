@@ -3,12 +3,13 @@
 
 from __future__ import annotations
 
-import importlib.util
+from importlib import util
 import json
 import sys
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
+from uuid import uuid4
 from unittest.mock import AsyncMock
 
 import pytest
@@ -18,15 +19,18 @@ from mindroom.tool_system.runtime_context import ToolRuntimeContext, tool_runtim
 if TYPE_CHECKING:
     from types import ModuleType
 
+PACKAGE_NAME = f"mindroom_plugin_{Path(__file__).resolve().parents[1].name.replace('-', '_')}"
+
 
 def _load_tools_module() -> ModuleType:
-    """Load the plugin tools module directly from disk."""
+    """Load the plugin tools module under its synthetic package name."""
     tools_path = Path(__file__).resolve().parents[1] / "tools.py"
-    module_name = "thread_goal_tools_test"
-    spec = importlib.util.spec_from_file_location(module_name, tools_path)
+    module_name = f"{PACKAGE_NAME}.tools_test_{uuid4().hex}"
+    sys.modules.pop(module_name, None)
+    spec = util.spec_from_file_location(module_name, tools_path)
     assert spec is not None
     assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
+    module = util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module

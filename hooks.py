@@ -3,29 +3,8 @@
 
 from __future__ import annotations
 
-import sys
-from importlib import util as importlib_util
-from pathlib import Path
-
 from mindroom.hooks import EnrichmentItem, MessageEnrichContext, hook
-
-# MindRoom loads plugin files (hooks.py, tools.py) by absolute path using
-# importlib.util.spec_from_file_location, so they aren't part of a real Python
-# package. Normal relative imports like ``from . import state`` don't work.
-# We load the sibling ``state.py`` the same way and cache it in sys.modules
-# so both hooks.py and tools.py share one instance.
-_PLUGIN_ROOT = Path(__file__).resolve().parent
-_STATE_MOD = "_thread_goal_state"
-if _STATE_MOD in sys.modules:
-    state = sys.modules[_STATE_MOD]
-else:
-    _state_spec = importlib_util.spec_from_file_location(_STATE_MOD, _PLUGIN_ROOT / "state.py")
-    assert _state_spec is not None and _state_spec.loader is not None  # noqa: S101
-    state = importlib_util.module_from_spec(_state_spec)
-    sys.modules[_STATE_MOD] = state
-    _state_spec.loader.exec_module(state)
-
-read_thread_goal_state = state.read_thread_goal
+from .state import read_thread_goal as read_thread_goal_state
 
 
 @hook(
@@ -52,5 +31,4 @@ async def inject_thread_goal(ctx: MessageEnrichContext) -> list[EnrichmentItem]:
         ),
     ]
 
-
-__all__ = ["inject_thread_goal", "state"]
+__all__ = ["inject_thread_goal"]

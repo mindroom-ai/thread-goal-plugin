@@ -4,10 +4,7 @@
 from __future__ import annotations
 
 import json
-import sys
 from datetime import UTC, datetime
-from importlib import util as importlib_util
-from pathlib import Path
 
 from agno.tools import Toolkit
 
@@ -23,31 +20,16 @@ from mindroom.tool_system.runtime_context import (
     get_tool_runtime_context,
     resolve_tool_runtime_hook_bindings,
 )
-
-# MindRoom loads plugin files (hooks.py, tools.py) by absolute path using
-# importlib.util.spec_from_file_location, so they aren't part of a real Python
-# package. Normal relative imports like ``from . import state`` don't work.
-# We load the sibling ``state.py`` the same way and cache it in sys.modules
-# so both hooks.py and tools.py share one instance.
-_PLUGIN_ROOT = Path(__file__).resolve().parent
-_STATE_MOD = "_thread_goal_state"
-if _STATE_MOD in sys.modules:
-    state = sys.modules[_STATE_MOD]
-else:
-    _state_spec = importlib_util.spec_from_file_location(_STATE_MOD, _PLUGIN_ROOT / "state.py")
-    assert _state_spec is not None and _state_spec.loader is not None  # noqa: S101
-    state = importlib_util.module_from_spec(_state_spec)
-    sys.modules[_STATE_MOD] = state
-    _state_spec.loader.exec_module(state)
-
-MAX_GOAL_CHARS: int = state.MAX_GOAL_CHARS
-ThreadGoalRecord = state.ThreadGoalRecord
-clear_thread_goal_state = state.clear_thread_goal
-has_thread_goal_content = state.has_thread_goal_content
-normalize_goal_text = state.normalize_goal_text
-query_thread_goal_content = state.query_thread_goal_content
-read_thread_goal_state = state.read_thread_goal
-write_thread_goal_state = state.write_thread_goal
+from .state import (
+    MAX_GOAL_CHARS,
+    ThreadGoalRecord,
+    clear_thread_goal as clear_thread_goal_state,
+    has_thread_goal_content,
+    normalize_goal_text,
+    query_thread_goal_content,
+    read_thread_goal as read_thread_goal_state,
+    write_thread_goal as write_thread_goal_state,
+)
 
 
 def _now_iso() -> str:
