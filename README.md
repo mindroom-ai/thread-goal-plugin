@@ -36,7 +36,7 @@ All tools are thread-scoped only — they refuse to operate at room level.
 
 ## Setup
 
-1. Copy to `~/.mindroom-chat/plugins/thread-goal`
+1. Copy to `~/.mindroom/plugins/thread-goal`
 2. Add to `config.yaml`:
    ```yaml
    plugins:
