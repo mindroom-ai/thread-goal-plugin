@@ -1,6 +1,6 @@
 # Thread Goal
 
-[![License](https://img.shields.io/github/license/mindroom-ai/thread-goal-plugin)](https://github.com/mindroom-ai/thread-goal-plugin/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-plugins-blue)](https://docs.mindroom.chat/plugins/)
 [![Hooks](https://img.shields.io/badge/docs-hooks-blue)](https://docs.mindroom.chat/hooks/)
 
@@ -8,40 +8,56 @@
 
 Persistent thread goals for [MindRoom](https://github.com/mindroom-ai/mindroom) agents that survive context compaction.
 
-When agents work on long tasks, conversation history gets compacted to save tokens. Important context can be lost. Thread Goal stores a short goal string (≤160 chars) as a Matrix state event and re-injects it into every prompt, so the agent always knows *what* it's working toward — no matter how many turns have passed.
+When agents work on long tasks, conversation history gets compacted to save tokens. Important context can disappear. Thread Goal stores a short shared goal string in Matrix room state and re-injects it into every prompt, so the agent keeps the same objective no matter how many turns, restarts, or compaction passes happen afterward.
 
-## How it works
+## Features
 
-1. Agent (or user) sets a goal via the `set_thread_goal` tool
-2. Goal is stored as a Matrix room state event (`com.mindroom.thread.goal`)
-3. Every turn, the `message:enrich` hook reads the goal from Matrix state and injects it into the prompt
-4. Goal persists indefinitely — immune to compaction, restarts, and context window limits
+- Stores a short thread goal in Matrix room state under `com.mindroom.thread.goal`
+- Re-injects the goal into every prompt via `message:enrich`
+- Persists across compaction, restarts, and long-running threads
+- Exposes dedicated thread-scoped tools to set, read, and clear the goal
+- Records `set_by` and `set_at` metadata alongside the goal text
+- Enforces a normalized 160-character limit so the stored goal stays compact
 
-## Agent tools
+## How It Works
+
+1. An agent calls `set_thread_goal(goal)` in the active thread.
+2. The plugin stores the normalized goal as a Matrix state event keyed by the thread root event ID.
+3. On each turn, the `thread-goal-context` hook reads the current goal from room state.
+4. If a goal exists, the hook injects a stable `Thread goal: ...` enrichment item into the prompt.
+
+## Agent Tools
 
 | Tool | Purpose |
 |------|---------|
-| `set_thread_goal(goal)` | Set or update the thread's goal (≤160 chars) |
-| `get_thread_goal()` | Read the current goal |
-| `clear_thread_goal()` | Remove the goal |
+| `set_thread_goal(goal)` | Set or update the current thread goal. Maximum length: 160 characters |
+| `get_thread_goal()` | Read the current thread goal and its metadata |
+| `clear_thread_goal()` | Clear the current thread goal |
 
-All tools are thread-scoped only — they refuse to operate at room level.
+All three tools are thread-scoped only. They refuse to operate at room level.
 
 ## Hooks
 
 | Hook | Event | Purpose |
 |------|-------|---------|
-| `inject_thread_goal` | `message:enrich` | Inject goal into prompt (priority 40, before workloop) |
+| `thread-goal-context` | `message:enrich` | Inject the current thread goal into the prompt before workloop runs |
+
+## Storage
+
+- Event type: `com.mindroom.thread.goal`
+- State key: the thread root event ID
+- Payload fields: `goal`, `set_by`, `set_at`
+- Clearing the goal writes an empty payload for that state key
 
 ## Setup
 
-1. Copy to `~/.mindroom/plugins/thread-goal`
-2. Add to `config.yaml`:
+1. Copy this plugin to `~/.mindroom/plugins/thread-goal`.
+2. Add the plugin to `config.yaml`:
    ```yaml
    plugins:
      - path: plugins/thread-goal
    ```
-3. Add `thread_goal` to agent's tools list
-4. Restart MindRoom
+3. Add `thread_goal` to the agent's tools list.
+4. Restart MindRoom.
 
-Complements [workloop](https://github.com/mindroom-ai/workloop-plugin): thread-goal is *what* the agent is trying to achieve, workloop is *how* it gets there.
+Complements [workloop](https://github.com/mindroom-ai/workloop-plugin): thread-goal is what the agent is trying to achieve, and workloop is how it gets there.
