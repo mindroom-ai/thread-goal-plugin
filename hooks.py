@@ -15,9 +15,10 @@ from .state import read_thread_goal as read_thread_goal_state
 )
 async def inject_thread_goal(ctx: MessageEnrichContext) -> list[EnrichmentItem]:
     """Inject the current thread goal into the model prompt."""
-    if ctx.envelope.target.thread_id is None:
+    target = ctx.envelope.target
+    if target.source_thread_id is None:
         return []
-    thread_id = ctx.envelope.target.resolved_thread_id or ctx.envelope.target.thread_id
+    thread_id = target.resolved_thread_id or target.source_thread_id
 
     record = await read_thread_goal_state(ctx.query_room_state, ctx.envelope.room_id, thread_id)
     if record is None:

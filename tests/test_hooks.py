@@ -36,7 +36,7 @@ def _load_hooks_module() -> ModuleType:
 
 def _context(
     *,
-    thread_id: str | None = "$thread-root",
+    source_thread_id: str | None = "$thread-root",
     resolved_thread_id: str | None = "$thread-root",
     goal_content: dict[str, object] | None = None,
 ) -> SimpleNamespace:
@@ -45,7 +45,7 @@ def _context(
         envelope=SimpleNamespace(
             room_id="!room:localhost",
             target=SimpleNamespace(
-                thread_id=thread_id,
+                source_thread_id=source_thread_id,
                 resolved_thread_id=resolved_thread_id,
             ),
         ),
@@ -90,12 +90,12 @@ async def test_enrichment_returns_empty_without_thread_or_goal() -> None:
     """Missing thread scope or tombstones should produce no enrichment."""
     module = _load_hooks_module()
 
-    no_thread_ctx = _context(thread_id=None, goal_content=None)
+    no_thread_ctx = _context(source_thread_id=None, goal_content=None)
     assert await module.inject_thread_goal(no_thread_ctx) == []
     no_thread_ctx.query_room_state.assert_not_awaited()
 
     room_reply_ctx = _context(
-        thread_id=None,
+        source_thread_id=None,
         resolved_thread_id="$reply:localhost",
         goal_content={
             "goal": "Should stay thread-only",
