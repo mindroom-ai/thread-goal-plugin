@@ -14,6 +14,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from mindroom.message_target import MessageTarget
 from mindroom.tool_system.runtime_context import ToolRuntimeContext, tool_runtime_context
 
 if TYPE_CHECKING:
@@ -45,13 +46,19 @@ def _tool_context(
 ) -> ToolRuntimeContext:
     return ToolRuntimeContext(
         agent_name="code",
-        room_id="!room:localhost",
-        thread_id=thread_id,
-        resolved_thread_id=resolved_thread_id,
+        target=MessageTarget(
+            room_id="!room:localhost",
+            source_thread_id=thread_id,
+            resolved_thread_id=resolved_thread_id,
+            reply_to_event_id=None,
+            session_id="session-1",
+        ),
         requester_id="@user:localhost",
         client=AsyncMock(),
         config=SimpleNamespace(),
         runtime_paths=SimpleNamespace(),
+        event_cache=AsyncMock(),
+        conversation_cache=AsyncMock(),
         room_state_querier=room_state_querier,
         room_state_putter=room_state_putter,
     )
