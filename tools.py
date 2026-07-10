@@ -8,12 +8,12 @@ from datetime import UTC, datetime
 
 from agno.tools import Toolkit
 
-from mindroom.tool_system.metadata import (
+from mindroom.tool_system.declarations import (
     SetupType,
     ToolCategory,
     ToolStatus,
-    register_tool_with_metadata,
 )
+from mindroom.tool_system.registration import register_tool_with_metadata
 from mindroom.tool_system.runtime_context import (
     ToolRuntimeContext,
     ToolRuntimeHookBindings,
