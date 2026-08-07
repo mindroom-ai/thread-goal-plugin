@@ -57,8 +57,8 @@ def _tool_context(
         client=AsyncMock(),
         config=SimpleNamespace(),
         runtime_paths=SimpleNamespace(),
-        event_cache=AsyncMock(),
-        conversation_cache=AsyncMock(),
+        conversation_reader=AsyncMock(),
+        relations=AsyncMock(),
         room_state_querier=room_state_querier,
         room_state_putter=room_state_putter,
     )
