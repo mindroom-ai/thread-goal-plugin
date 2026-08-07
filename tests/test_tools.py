@@ -6,6 +6,7 @@ from __future__ import annotations
 from importlib import util
 import json
 import sys
+from dataclasses import fields
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
@@ -21,6 +22,22 @@ if TYPE_CHECKING:
     from types import ModuleType
 
 PACKAGE_NAME = f"mindroom_plugin_{Path(__file__).resolve().parents[1].name.replace('-', '_')}"
+
+# This plugin reads none of MindRoom's conversation collaborators; it only has
+# to name the required ones to build a context at all. Which ones those are is
+# moving: the event-journal cutover drops `event_cache` for `conversation_reader`
+# and `relations`, and retires the conversation cache after that. Naming every
+# spelling and passing only the ones the installed MindRoom declares keeps this
+# suite green on both sides of that change instead of pinning it to one.
+_CONVERSATION_COLLABORATORS = frozenset(
+    {"conversation_cache", "conversation_reader", "event_cache", "relations"},
+)
+
+
+def _conversation_collaborators() -> dict[str, AsyncMock]:
+    """Return a stand-in for each conversation collaborator this MindRoom declares."""
+    declared = {field.name for field in fields(ToolRuntimeContext)}
+    return {name: AsyncMock() for name in _CONVERSATION_COLLABORATORS & declared}
 
 
 def _load_tools_module() -> ModuleType:
@@ -57,8 +74,7 @@ def _tool_context(
         client=AsyncMock(),
         config=SimpleNamespace(),
         runtime_paths=SimpleNamespace(),
-        event_cache=AsyncMock(),
-        conversation_cache=AsyncMock(),
+        **_conversation_collaborators(),
         room_state_querier=room_state_querier,
         room_state_putter=room_state_putter,
     )
