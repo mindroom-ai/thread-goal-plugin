@@ -11,6 +11,7 @@ from agno.tools import Toolkit
 from mindroom.tool_system.declarations import (
     SetupType,
     ToolCategory,
+    ToolFileAccess,
     ToolStatus,
 )
 from mindroom.tool_system.registration import register_tool_with_metadata
@@ -216,6 +217,7 @@ class ThreadGoalTools(Toolkit):
 
 @register_tool_with_metadata(
     name="thread_goal",
+    file_access=ToolFileAccess.NONE,
     display_name="Thread Goal",
     description="Set, read, and clear a short shared goal for the current Matrix thread.",
     category=ToolCategory.PRODUCTIVITY,
