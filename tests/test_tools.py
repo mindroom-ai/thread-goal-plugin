@@ -6,7 +6,6 @@ from __future__ import annotations
 from importlib import util
 import json
 import sys
-from dataclasses import fields
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
@@ -15,30 +14,15 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from mindroom.hooks import HookBindings
 from mindroom.message_target import MessageTarget
+from mindroom.tool_system.registry import plugin_module_registrations
 from mindroom.tool_system.runtime_context import ToolRuntimeContext, tool_runtime_context
 
 if TYPE_CHECKING:
     from types import ModuleType
 
 PACKAGE_NAME = f"mindroom_plugin_{Path(__file__).resolve().parents[1].name.replace('-', '_')}"
-
-# This plugin reads none of MindRoom's conversation collaborators; it only has
-# to name the required ones to build a context at all. Which ones those are is
-# moving: the event-journal cutover drops `event_cache` for `conversation_reader`
-# and `relations`, and retires the conversation cache after that. Naming every
-# spelling and passing only the ones the installed MindRoom declares keeps this
-# suite green on both sides of that change instead of pinning it to one.
-_CONVERSATION_COLLABORATORS = frozenset(
-    {"conversation_cache", "conversation_reader", "event_cache", "relations"},
-)
-
-
-def _conversation_collaborators() -> dict[str, AsyncMock]:
-    """Return a stand-in for each conversation collaborator this MindRoom declares."""
-    declared = {field.name for field in fields(ToolRuntimeContext)}
-    return {name: AsyncMock() for name in _CONVERSATION_COLLABORATORS & declared}
-
 
 def _load_tools_module() -> ModuleType:
     """Load the plugin tools module under its synthetic package name."""
@@ -50,7 +34,9 @@ def _load_tools_module() -> ModuleType:
     assert spec.loader is not None
     module = util.module_from_spec(spec)
     sys.modules[module_name] = module
-    spec.loader.exec_module(module)
+    # A plugin module registers its tools while it loads, as the plugin loader runs it.
+    with plugin_module_registrations(module_name):
+        spec.loader.exec_module(module)
     return module
 
 
@@ -74,9 +60,10 @@ def _tool_context(
         client=AsyncMock(),
         config=SimpleNamespace(),
         runtime_paths=SimpleNamespace(),
-        **_conversation_collaborators(),
-        room_state_querier=room_state_querier,
-        room_state_putter=room_state_putter,
+        plugins=SimpleNamespace(),
+        conversation_reader=AsyncMock(),
+        relations=AsyncMock(),
+        hooks=HookBindings(room_state_querier=room_state_querier, room_state_putter=room_state_putter),
     )
 
 

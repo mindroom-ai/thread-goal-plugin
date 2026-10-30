@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 
 from agno.tools import Toolkit
 
+from mindroom.hooks import HookBindings
 from mindroom.tool_system.declarations import (
     SetupType,
     ToolCategory,
@@ -17,9 +18,7 @@ from mindroom.tool_system.declarations import (
 from mindroom.tool_system.registration import register_tool_with_metadata
 from mindroom.tool_system.runtime_context import (
     ToolRuntimeContext,
-    ToolRuntimeHookBindings,
     get_tool_runtime_context,
-    resolve_tool_runtime_hook_bindings,
 )
 from .state import (
     MAX_GOAL_CHARS,
@@ -61,7 +60,7 @@ def _resolve_state_access(
     *,
     action: str,
     require_putter: bool,
-) -> tuple[ToolRuntimeContext, str, str, ToolRuntimeHookBindings] | str:
+) -> tuple[ToolRuntimeContext, str, str, HookBindings] | str:
     """Resolve the active thread scope and room-state bindings."""
     context = get_tool_runtime_context()
     if context is None:
@@ -77,7 +76,7 @@ def _resolve_state_access(
         )
     context, room_id, thread_id = resolved_scope
 
-    bindings = resolve_tool_runtime_hook_bindings(context)
+    bindings = context.hooks
     if bindings.room_state_querier is None:
         return _context_error(
             action,
