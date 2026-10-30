@@ -15,7 +15,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from mindroom.hooks import HookBindings
 from mindroom.message_target import MessageTarget
+from mindroom.tool_system.registry import plugin_module_registrations
 from mindroom.tool_system.runtime_context import ToolRuntimeContext, tool_runtime_context
 
 if TYPE_CHECKING:
@@ -50,7 +52,9 @@ def _load_tools_module() -> ModuleType:
     assert spec.loader is not None
     module = util.module_from_spec(spec)
     sys.modules[module_name] = module
-    spec.loader.exec_module(module)
+    # A plugin module registers its tools while it loads, as the plugin loader runs it.
+    with plugin_module_registrations(module_name):
+        spec.loader.exec_module(module)
     return module
 
 
@@ -74,9 +78,9 @@ def _tool_context(
         client=AsyncMock(),
         config=SimpleNamespace(),
         runtime_paths=SimpleNamespace(),
+        plugins=SimpleNamespace(),
         **_conversation_collaborators(),
-        room_state_querier=room_state_querier,
-        room_state_putter=room_state_putter,
+        hooks=HookBindings(room_state_querier=room_state_querier, room_state_putter=room_state_putter),
     )
 
 
