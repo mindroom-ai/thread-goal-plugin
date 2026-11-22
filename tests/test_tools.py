@@ -14,10 +14,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from mindroom.hooks import HookBindings
-from mindroom.message_target import MessageTarget
+from mindroom.plugin_api import HookBindings, MessageTarget, ToolRuntimeContext
 from mindroom.tool_system.registry import plugin_module_registrations
-from mindroom.tool_system.runtime_context import ToolRuntimeContext, tool_runtime_context
+from mindroom.tool_system.runtime_context import tool_runtime_context
 
 if TYPE_CHECKING:
     from types import ModuleType

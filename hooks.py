@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from mindroom.hooks import EnrichmentItem, MessageEnrichContext, hook
+from mindroom.plugin_api import EnrichmentItem, MessageEnrichContext, hook
 from .state import read_thread_goal as read_thread_goal_state
 
 
