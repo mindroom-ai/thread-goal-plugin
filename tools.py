@@ -8,17 +8,15 @@ from datetime import UTC, datetime
 
 from agno.tools import Toolkit
 
-from mindroom.hooks import HookBindings
-from mindroom.tool_system.declarations import (
+from mindroom.plugin_api import (
+    HookBindings,
     SetupType,
     ToolCategory,
     ToolFileAccess,
-    ToolStatus,
-)
-from mindroom.tool_system.registration import register_tool_with_metadata
-from mindroom.tool_system.runtime_context import (
     ToolRuntimeContext,
+    ToolStatus,
     get_tool_runtime_context,
+    register_tool_with_metadata,
 )
 from .state import (
     MAX_GOAL_CHARS,
