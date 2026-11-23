@@ -3,8 +3,8 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/mindroom-ai/thread-goal-plugin/actions/workflows/plugin-ci.yml/badge.svg)](https://github.com/mindroom-ai/thread-goal-plugin/actions/workflows/plugin-ci.yml)
 [![Docs](https://img.shields.io/badge/docs-plugins-blue)](https://docs.mindroom.chat/plugins/)
-[![Hooks](https://img.shields.io/badge/docs-hooks-blue)](https://docs.mindroom.chat/hooks/)
 [![Tools](https://img.shields.io/badge/docs-tools-blue)](https://docs.mindroom.chat/tools/)
+[![Hooks](https://img.shields.io/badge/docs-hooks-blue)](https://docs.mindroom.chat/hooks/)
 
 <picture>
   <source media="(prefers-reduced-motion: no-preference)" srcset="https://raw.githubusercontent.com/mindroom-ai/mindroom/main/assets/logo/logo-mark-animated.svg" />
@@ -41,7 +41,7 @@ agents:
 No plugin `settings:` are needed. Add `thread_goal` to `agents.<name>.tools` for any agent that should set, read, or clear goals; the enrichment hook injects an active goal on every thread turn automatically.
 
 Update later with `mindroom plugins update thread-goal-plugin`.
-Requires MindRoom plugin API 1.0 or later.
+Needs MindRoom v2026.11.180 or later (plugin API 1.0).
 
 ## Tools
 
