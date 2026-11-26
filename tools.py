@@ -6,17 +6,17 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 
-from agno.tools import Toolkit
-
 from mindroom.plugin_api import (
     HookBindings,
     SetupType,
     ToolCategory,
     ToolFileAccess,
+    Toolkit,
     ToolRuntimeContext,
     ToolStatus,
     get_tool_runtime_context,
     register_tool_with_metadata,
+    tool,
 )
 from .state import (
     MAX_GOAL_CHARS,
@@ -100,13 +100,9 @@ class ThreadGoalTools(Toolkit):
                 "Goals are short, shared thread metadata and should stay under "
                 f"{MAX_GOAL_CHARS} characters."
             ),
-            tools=[
-                self.set_thread_goal,
-                self.get_thread_goal,
-                self.clear_thread_goal,
-            ],
         )
 
+    @tool
     async def set_thread_goal(self, goal: str) -> str:
         """Set or update the current thread goal."""
         resolved = _resolve_state_access(action="set", require_putter=True)
@@ -152,6 +148,7 @@ class ThreadGoalTools(Toolkit):
             set_at=record.set_at,
         )
 
+    @tool
     async def get_thread_goal(self) -> str:
         """Return the current thread goal when one is set."""
         resolved = _resolve_state_access(action="get", require_putter=False)
@@ -182,6 +179,7 @@ class ThreadGoalTools(Toolkit):
             set_at=record.set_at,
         )
 
+    @tool
     async def clear_thread_goal(self) -> str:
         """Clear the current thread goal."""
         resolved = _resolve_state_access(action="clear", require_putter=True)
