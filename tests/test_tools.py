@@ -14,9 +14,10 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from mindroom.plugin_api import HookBindings, MessageTarget, ToolRuntimeContext
+from mindroom.plugin_api import HookBindings, MessageTarget, Toolkit, ToolRuntimeContext
 from mindroom.tool_system.registry import plugin_module_registrations
 from mindroom.tool_system.runtime_context import tool_runtime_context
+from mindroom.tool_system.tool_schema import tool_parameters
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -71,9 +72,9 @@ def test_set_thread_goal_schema_requires_goal() -> None:
     module = _load_tools_module()
 
     tools = module.ThreadGoalTools()
-    function = tools.async_functions["set_thread_goal"]
-    function.process_entrypoint()
-    schema = function.parameters
+    assert isinstance(tools, Toolkit)
+    assert list(tools.functions) == ["set_thread_goal", "get_thread_goal", "clear_thread_goal"]
+    schema = tool_parameters(tools.functions["set_thread_goal"])
 
     assert "goal" in schema["required"]
     assert schema["properties"]["goal"]["type"] == "string"
