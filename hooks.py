@@ -1,9 +1,9 @@
-# ruff: noqa: INP001
 """Hook entrypoint for the MindRoom thread-goal plugin."""
 
 from __future__ import annotations
 
 from mindroom.plugin_api import EnrichmentItem, MessageEnrichContext, hook
+
 from .state import read_thread_goal as read_thread_goal_state
 
 
@@ -20,7 +20,9 @@ async def inject_thread_goal(ctx: MessageEnrichContext) -> list[EnrichmentItem]:
         return []
     thread_id = target.resolved_thread_id or target.source_thread_id
 
-    record = await read_thread_goal_state(ctx.query_room_state, ctx.envelope.room_id, thread_id)
+    record = await read_thread_goal_state(
+        ctx.query_room_state, ctx.envelope.room_id, thread_id
+    )
     if record is None:
         return []
 
@@ -31,5 +33,6 @@ async def inject_thread_goal(ctx: MessageEnrichContext) -> list[EnrichmentItem]:
             cache_policy="stable",
         ),
     ]
+
 
 __all__ = ["inject_thread_goal"]

@@ -1,28 +1,35 @@
-# ruff: noqa: INP001
 """Tests for the thread-goal toolkit."""
 
 from __future__ import annotations
 
-from importlib import util
 import json
 import sys
+from importlib import util
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING
-from uuid import uuid4
+from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
-
-from mindroom.plugin_api import HookBindings, MessageTarget, Toolkit, ToolRuntimeContext
+from mindroom.plugin_api import (
+    HookBindings,
+    MessageTarget,
+    Toolkit,
+    ToolRuntimeContext,
+)
+from mindroom.tool_system.output_files import ToolOutputFilePolicy
 from mindroom.tool_system.registry import plugin_module_registrations
 from mindroom.tool_system.runtime_context import tool_runtime_context
-from mindroom.tool_system.tool_schema import tool_parameters
+from mindroom.tool_system.toolkits import adapt_toolkit, configure_toolkit_functions
 
 if TYPE_CHECKING:
     from types import ModuleType
 
-PACKAGE_NAME = f"mindroom_plugin_{Path(__file__).resolve().parents[1].name.replace('-', '_')}"
+PACKAGE_NAME = (
+    f"mindroom_plugin_{Path(__file__).resolve().parents[1].name.replace('-', '_')}"
+)
+
 
 def _load_tools_module() -> ModuleType:
     """Load the plugin tools module under its synthetic package name."""
@@ -63,21 +70,97 @@ def _tool_context(
         plugins=SimpleNamespace(),
         conversation_reader=AsyncMock(),
         relations=AsyncMock(),
-        hooks=HookBindings(room_state_querier=room_state_querier, room_state_putter=room_state_putter),
+        hooks=HookBindings(
+            room_state_querier=room_state_querier,
+            room_state_putter=room_state_putter,
+        ),
     )
 
 
-def test_set_thread_goal_schema_requires_goal() -> None:
-    """The toolkit schema should expose one required goal argument."""
+def test_thread_goal_schema_and_metadata(tmp_path: Path) -> None:
+    """The toolkit should expose one unified action-based tool without reserved params."""
     module = _load_tools_module()
 
     tools = module.ThreadGoalTools()
     assert isinstance(tools, Toolkit)
-    assert list(tools.functions) == ["set_thread_goal", "get_thread_goal", "clear_thread_goal"]
-    schema = tool_parameters(tools.functions["set_thread_goal"])
+    assert list(tools.functions) == ["thread_goal"]
+    assert tools.offer_background_after is False
+    assert tools.offer_output_path is False
+    assert "thread_goal(action=" in (tools.instructions or "")
 
-    assert "goal" in schema["required"]
+    configure_toolkit_functions(
+        tools,
+        output_files=ToolOutputFilePolicy(workspace_root=tmp_path),
+    )
+    adapted = adapt_toolkit(tools)
+    assert len(adapted.functions) == 1
+    function = adapted.functions[0]
+    assert function.name == "thread_goal"
+    assert function.offer_background_after is False
+    assert function.offer_output_path is False
+
+    schema = function.parameters
+    assert schema["required"] == ["action"]
+    assert schema["properties"]["action"]["type"] == "string"
+    assert schema["properties"]["action"]["enum"] == ["get", "set", "clear"]
+    assert schema["properties"]["action"]["description"]
     assert schema["properties"]["goal"]["type"] == "string"
+    assert schema["properties"]["goal"]["description"]
+    assert "background_after" not in schema["properties"]
+    assert "mindroom_output_path" not in schema["properties"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("action", "goal", "expected_action", "expected_message"),
+    [
+        ("get", "Ship it", "get", "Parameter 'goal' cannot be used with action='get'."),
+        ("get", "", "get", "Parameter 'goal' cannot be used with action='get'."),
+        (
+            "clear",
+            "Ship it",
+            "clear",
+            "Parameter 'goal' cannot be used with action='clear'.",
+        ),
+        ("clear", "", "clear", "Parameter 'goal' cannot be used with action='clear'."),
+        ("set", None, "set", "Parameter 'goal' is required for action='set'."),
+        ("set", " \n\t ", "set", "goal must be a non-empty string."),
+        ("set", "x" * 161, "set", "goal must be 160 characters or fewer."),
+        (
+            "delete",
+            None,
+            None,
+            "Unsupported thread_goal action 'delete'. Expected one of: get, set, clear.",
+        ),
+    ],
+)
+async def test_per_action_argument_validation(
+    action: Any,
+    goal: str | None,
+    expected_action: str | None,
+    expected_message: str,
+) -> None:
+    """Invalid actions and mismatched per-action arguments should fail cleanly."""
+    module = _load_tools_module()
+    tools = module.ThreadGoalTools()
+    querier = AsyncMock()
+    putter = AsyncMock()
+
+    with tool_runtime_context(
+        _tool_context(room_state_querier=querier, room_state_putter=putter),
+    ):
+        result = json.loads(await tools.thread_goal(action=action, goal=goal))
+
+    expected: dict[str, object] = {
+        "message": expected_message,
+        "status": "error",
+        "tool": "thread_goal",
+    }
+    if expected_action is not None:
+        expected["action"] = expected_action
+    assert result == expected
+    querier.assert_not_awaited()
+    putter.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -110,11 +193,16 @@ async def test_set_get_clear_cycle_and_idempotency() -> None:
     with tool_runtime_context(
         _tool_context(room_state_querier=querier, room_state_putter=putter),
     ):
-        set_result = json.loads(await tools.set_thread_goal("  Ship\n ISSUE-083 safely  "))
-        repeat_result = json.loads(await tools.set_thread_goal("Ship ISSUE-083 safely"))
-        get_result = json.loads(await tools.get_thread_goal())
-        clear_result = json.loads(await tools.clear_thread_goal())
-        empty_result = json.loads(await tools.get_thread_goal())
+        set_result = json.loads(
+            await tools.thread_goal(action="set", goal="  Ship\n ISSUE-083 safely  "),
+        )
+        repeat_result = json.loads(
+            await tools.thread_goal(action="set", goal="Ship ISSUE-083 safely"),
+        )
+        get_result = json.loads(await tools.thread_goal(action="get"))
+        clear_result = json.loads(await tools.thread_goal(action="clear"))
+        repeat_clear_result = json.loads(await tools.thread_goal(action="clear"))
+        empty_result = json.loads(await tools.thread_goal(action="get"))
 
     assert set_result["status"] == "ok"
     assert set_result["action"] == "set"
@@ -145,6 +233,7 @@ async def test_set_get_clear_cycle_and_idempotency() -> None:
         "thread_id": "$thread-root",
         "tool": "thread_goal",
     }
+    assert repeat_clear_result["changed"] is False
     assert empty_result["found"] is False
     assert empty_result["goal"] is None
 
@@ -163,7 +252,7 @@ async def test_unresolved_thread_context_returns_clear_error() -> None:
             room_state_putter=AsyncMock(),
         ),
     ):
-        result = json.loads(await tools.set_thread_goal("Ship it"))
+        result = json.loads(await tools.thread_goal(action="set", goal="Ship it"))
 
     assert result == {
         "action": "set",
@@ -189,7 +278,7 @@ async def test_room_reply_context_is_not_treated_as_thread_scope() -> None:
             room_state_putter=putter,
         ),
     ):
-        result = json.loads(await tools.set_thread_goal("Ship it"))
+        result = json.loads(await tools.thread_goal(action="set", goal="Ship it"))
 
     assert result == {
         "action": "set",
@@ -208,7 +297,7 @@ async def test_tool_returns_error_without_runtime_context() -> None:
     tools = module.ThreadGoalTools()
 
     with tool_runtime_context(None):
-        result = json.loads(await tools.get_thread_goal())
+        result = json.loads(await tools.thread_goal(action="get"))
 
     assert result == {
         "action": "get",
@@ -232,7 +321,9 @@ async def test_tool_returns_error_when_state_write_fails() -> None:
             room_state_putter=putter,
         ),
     ):
-        result = json.loads(await tools.set_thread_goal("Ship ISSUE-083 safely"))
+        result = json.loads(
+            await tools.thread_goal(action="set", goal="Ship ISSUE-083 safely"),
+        )
 
     assert result == {
         "action": "set",

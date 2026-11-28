@@ -1,4 +1,3 @@
-# ruff: noqa: INP001
 """Thread goal state helpers backed by Matrix room state."""
 
 from __future__ import annotations
@@ -10,7 +9,9 @@ from typing import Any
 THREAD_GOAL_EVENT_TYPE = "com.mindroom.thread.goal"
 MAX_GOAL_CHARS = 160
 
-type RoomStateQuerier = Callable[[str, str, str | None], Awaitable[dict[str, Any] | None]]
+type RoomStateQuerier = Callable[
+    [str, str, str | None], Awaitable[dict[str, Any] | None]
+]
 type RoomStatePutter = Callable[[str, str, str, dict[str, Any]], Awaitable[bool]]
 
 
@@ -113,7 +114,9 @@ async def read_thread_goal(
     thread_root_event_id: str,
 ) -> ThreadGoalRecord | None:
     """Read and parse one thread-goal record."""
-    content = await query_thread_goal_content(query_room_state, room_id, thread_root_event_id)
+    content = await query_thread_goal_content(
+        query_room_state, room_id, thread_root_event_id
+    )
     return parse_thread_goal_content(content)
 
 

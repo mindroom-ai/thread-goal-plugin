@@ -1,10 +1,9 @@
-# ruff: noqa: INP001
 """Tests for thread-goal state helpers."""
 
 from __future__ import annotations
 
-from importlib import util
 import sys
+from importlib import util
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -13,7 +12,9 @@ import pytest
 if TYPE_CHECKING:
     from types import ModuleType
 
-PACKAGE_NAME = f"mindroom_plugin_{Path(__file__).resolve().parents[1].name.replace('-', '_')}"
+PACKAGE_NAME = (
+    f"mindroom_plugin_{Path(__file__).resolve().parents[1].name.replace('-', '_')}"
+)
 
 
 def _load_state_module() -> ModuleType:
@@ -34,7 +35,10 @@ def test_normalize_goal_text_rejects_empty_and_too_long_values() -> None:
     """Normalization should collapse whitespace and reject invalid values."""
     module = _load_state_module()
 
-    assert module.normalize_goal_text("  Ship\n ISSUE-083   safely  ") == "Ship ISSUE-083 safely"
+    assert (
+        module.normalize_goal_text("  Ship\n ISSUE-083   safely  ")
+        == "Ship ISSUE-083 safely"
+    )
 
     with pytest.raises(TypeError, match="string"):
         module.normalize_goal_text(123)

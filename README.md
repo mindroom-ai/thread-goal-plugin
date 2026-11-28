@@ -16,10 +16,10 @@ A [MindRoom](https://github.com/mindroom-ai/mindroom) plugin that stores a short
 - **Survives compaction and restarts:** persists the thread's objective in Matrix room state (`com.mindroom.thread.goal`) keyed by the thread root event ID.
 - **Injected on every turn:** a `message:enrich` hook adds a stable `Thread goal: ...` prompt line whenever the thread has a goal set.
 - **Compact by design:** collapses whitespace and enforces a 160-character limit so the prompt stays concise.
-- **Thread-scoped tools:** agents can set, read, and clear the current thread's goal (recording `set_by` and `set_at`); room-level calls are refused.
+- **Thread-scoped tool:** agents can get, set, and clear the current thread's goal (recording `set_by` and `set_at`); room-level calls are refused.
 
 ```text
-Agent calls:    set_thread_goal("Ship v2 auth migration with zero downtime and passing integration tests")
+Agent calls:    thread_goal(action="set", goal="Ship v2 auth migration with zero downtime and passing integration tests")
 Injected line:  Thread goal: Ship v2 auth migration with zero downtime and passing integration tests
 ```
 
@@ -45,15 +45,15 @@ Needs MindRoom v2026.11.180 or later (plugin API 1.0).
 
 ## Tools
 
-Toolkit name: `thread_goal`.
+Toolkit name: `thread_goal`. Exposes one tool, `thread_goal(action, goal=None)`:
 
-| Tool | Purpose |
+| Call | Purpose |
 |------|---------|
-| `set_thread_goal(goal)` | Set or update the current thread goal (normalized, up to 160 characters) |
-| `get_thread_goal()` | Read the current thread goal and its `set_by` / `set_at` metadata |
-| `clear_thread_goal()` | Clear the current thread goal |
+| `thread_goal(action="get")` | Read the current thread goal and its `set_by` / `set_at` metadata |
+| `thread_goal(action="set", goal=...)` | Set or update the current thread goal (normalized, up to 160 characters) |
+| `thread_goal(action="clear")` | Clear the current thread goal |
 
-All three tools are thread-scoped only and refuse room-level calls. Pairs cleanly with MindRoom's native `todo` tools: keep the overarching objective here while tracking individual steps in todos.
+Thread-scoped only — room-level calls are refused, and passing `goal` with `"get"` or `"clear"` returns an error. Pairs cleanly with MindRoom's native `todo` tool: keep the overarching objective here while tracking individual steps in todos.
 
 ## Hooks
 
@@ -64,10 +64,10 @@ All three tools are thread-scoped only and refuse room-level calls. Pairs cleanl
 <details>
 <summary><b>How it works</b></summary>
 
-1. In an active thread, an agent calls `set_thread_goal(goal)`. The tool collapses whitespace, enforces the 160-character limit, and writes a Matrix room-state event if the normalized text changed.
+1. In an active thread, an agent calls `thread_goal(action="set", goal=...)`. The tool collapses whitespace, enforces the 160-character limit, and writes a Matrix room-state event if the normalized text changed.
 2. On every turn inside a thread (`source_thread_id` present), `thread-goal-context` runs at `priority=40` (`timeout_ms=1000`) and reads the goal for `resolved_thread_id or source_thread_id`.
 3. When a goal exists, the hook returns an `EnrichmentItem` with `key="thread_goal"`, `text="Thread goal: <goal>"`, and `cache_policy="stable"`, keeping the objective pinned across compaction without churning prompt caches.
-4. Calling `clear_thread_goal()` clears the stored state so subsequent turns inject nothing.
+4. Calling `thread_goal(action="clear")` clears the stored state so subsequent turns inject nothing.
 
 </details>
 
