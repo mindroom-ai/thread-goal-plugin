@@ -26,6 +26,11 @@ from mindroom.tool_system.registry import ToolRegistry, plugin_module_registrati
 from mindroom.tool_system.runtime_context import tool_runtime_context
 from mindroom.tool_system.toolkits import adapt_toolkit, configure_toolkit_functions
 
+try:
+    from mindroom.config.runtime import validate_config_with_runtime
+except ImportError:
+    validate_config_with_runtime = Config.validate_with_runtime
+
 if TYPE_CHECKING:
     from types import ModuleType
 
@@ -204,7 +209,7 @@ def test_retired_functions_fail_closed_in_config_validation(tmp_path: Path) -> N
             },
         }
         with pytest.raises(ConfigRuntimeValidationError, match="thread_goal"):
-            Config.validate_with_runtime(stale_data, runtime_paths)
+            validate_config_with_runtime(stale_data, runtime_paths)
 
     migrated_data = {
         "models": {"default": {"provider": "openai", "id": "x"}},
@@ -220,7 +225,7 @@ def test_retired_functions_fail_closed_in_config_validation(tmp_path: Path) -> N
             ],
         },
     }
-    loaded = Config.validate_with_runtime(migrated_data, runtime_paths)
+    loaded = validate_config_with_runtime(migrated_data, runtime_paths)
     assert [rule.match for rule in loaded.tool_approval.rules] == ["clear_thread_goal", "thread_goal"]
 
 
