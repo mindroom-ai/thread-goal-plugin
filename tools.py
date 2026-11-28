@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from typing import Literal
 
 from mindroom.plugin_api import (
     HookBindings,
@@ -18,16 +19,19 @@ from mindroom.plugin_api import (
     register_tool_with_metadata,
     tool,
 )
+
 from .state import (
     MAX_GOAL_CHARS,
     ThreadGoalRecord,
-    clear_thread_goal as clear_thread_goal_state,
     has_thread_goal_content,
     normalize_goal_text,
     query_thread_goal_content,
-    read_thread_goal as read_thread_goal_state,
-    write_thread_goal as write_thread_goal_state,
 )
+from .state import clear_thread_goal as clear_thread_goal_state
+from .state import read_thread_goal as read_thread_goal_state
+from .state import write_thread_goal as write_thread_goal_state
+
+_VALID_ACTIONS = ("get", "set", "clear")
 
 
 def _now_iso() -> str:
@@ -92,28 +96,58 @@ def _resolve_state_access(
 class ThreadGoalTools(Toolkit):
     """Toolkit for storing and reading per-thread goals in Matrix state."""
 
+    offer_background_after = False
+    offer_output_path = False
+
     def __init__(self) -> None:
         super().__init__(
             name="thread_goal",
             instructions=(
-                "Use these tools to capture the current thread's high-level objective. "
-                "Goals are short, shared thread metadata and should stay under "
-                f"{MAX_GOAL_CHARS} characters."
+                'Use `thread_goal(action="get"|"set"|"clear")` to inspect, update, or clear '
+                "the current thread's high-level objective. Goals are short, shared thread "
+                f"metadata and must be {MAX_GOAL_CHARS} characters or fewer."
             ),
         )
 
     @tool
-    async def set_thread_goal(self, goal: str) -> str:
-        """Set or update the current thread goal."""
+    async def thread_goal(
+        self,
+        action: Literal["get", "set", "clear"],
+        goal: str | None = None,
+    ) -> str:
+        """Get, set, or clear the current thread's shared goal.
+
+        Args:
+            action: Operation to run: "get", "set", or "clear".
+            goal: Short thread objective. Required for action="set"; omit for "get" and "clear".
+        """
+        if not isinstance(action, str) or action not in _VALID_ACTIONS:
+            return _payload(
+                "error",
+                message=f"Unsupported thread_goal action {action!r}. Expected one of: {', '.join(_VALID_ACTIONS)}.",
+            )
+        if action == "set":
+            return await self._set_thread_goal(goal)
+        if goal is not None:
+            return _context_error(action, message=f"Parameter 'goal' cannot be used with action={action!r}.")
+        if action == "get":
+            return await self._get_thread_goal()
+        return await self._clear_thread_goal()
+
+    @staticmethod
+    async def _set_thread_goal(goal: str | None) -> str:
+        if not isinstance(goal, str):
+            message = "Parameter 'goal' is required for action='set'." if goal is None else "goal must be a string."
+            return _context_error("set", message=message)
+        try:
+            normalized_goal = normalize_goal_text(goal)
+        except ValueError as exc:
+            return _context_error("set", message=str(exc))
+
         resolved = _resolve_state_access(action="set", require_putter=True)
         if isinstance(resolved, str):
             return resolved
         context, room_id, thread_id, bindings = resolved
-
-        try:
-            normalized_goal = normalize_goal_text(goal)
-        except (TypeError, ValueError) as exc:
-            return _context_error("set", message=str(exc))
 
         existing = await read_thread_goal_state(bindings.room_state_querier, room_id, thread_id)
         if existing is not None and existing.goal == normalized_goal:
@@ -148,9 +182,8 @@ class ThreadGoalTools(Toolkit):
             set_at=record.set_at,
         )
 
-    @tool
-    async def get_thread_goal(self) -> str:
-        """Return the current thread goal when one is set."""
+    @staticmethod
+    async def _get_thread_goal() -> str:
         resolved = _resolve_state_access(action="get", require_putter=False)
         if isinstance(resolved, str):
             return resolved
@@ -179,9 +212,8 @@ class ThreadGoalTools(Toolkit):
             set_at=record.set_at,
         )
 
-    @tool
-    async def clear_thread_goal(self) -> str:
-        """Clear the current thread goal."""
+    @staticmethod
+    async def _clear_thread_goal() -> str:
         resolved = _resolve_state_access(action="clear", require_putter=True)
         if isinstance(resolved, str):
             return resolved
@@ -220,6 +252,12 @@ class ThreadGoalTools(Toolkit):
     setup_type=SetupType.NONE,
     icon="CiBullseye",
     icon_color="text-amber-500",
+    action_scoped_grants=("thread_goal",),
+    retired_functions={
+        "set_thread_goal": "thread_goal",
+        "get_thread_goal": "thread_goal",
+        "clear_thread_goal": "thread_goal",
+    },
 )
 def thread_goal_factory() -> type[ThreadGoalTools]:
     """Factory function for the thread-goal toolkit."""
