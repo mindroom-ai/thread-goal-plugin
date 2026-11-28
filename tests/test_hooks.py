@@ -1,23 +1,23 @@
+# ruff: noqa: INP001
 """Tests for the thread-goal enrichment hook."""
 
 from __future__ import annotations
 
-import sys
 from importlib import util
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock
 
 import pytest
+
 from mindroom.hooks.decorators import get_hook_metadata
 
 if TYPE_CHECKING:
     from types import ModuleType
 
-PACKAGE_NAME = (
-    f"mindroom_plugin_{Path(__file__).resolve().parents[1].name.replace('-', '_')}"
-)
+PACKAGE_NAME = f"mindroom_plugin_{Path(__file__).resolve().parents[1].name.replace('-', '_')}"
 
 
 def _load_hooks_module() -> ModuleType:

@@ -1,3 +1,4 @@
+# ruff: noqa: INP001
 """Bootstrap the thread-goal plugin package for standalone pytest runs."""
 
 from __future__ import annotations

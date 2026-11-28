@@ -41,7 +41,7 @@ agents:
 No plugin `settings:` are needed. Add `thread_goal` to `agents.<name>.tools` for any agent that should set, read, or clear goals; the enrichment hook injects an active goal on every thread turn automatically.
 
 Update later with `mindroom plugins update thread-goal-plugin`.
-Needs MindRoom v2026.11.180 or later (plugin API 1.0).
+Needs a MindRoom version supporting plugin API 1.35 or later.
 
 ## Tools
 

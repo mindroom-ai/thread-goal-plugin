@@ -1,6 +1,6 @@
 {
   "name": "thread-goal",
   "hooks_module": "hooks.py",
-  "mindroom_plugin_api": "1.0",
+  "mindroom_plugin_api": "1.35",
   "tools_module": "tools.py"
 }
